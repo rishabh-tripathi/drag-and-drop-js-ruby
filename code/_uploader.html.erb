@@ -1,0 +1,438 @@
+<%
+   id = "ds-output"
+   id = div_id if(defined? div_id)
+   view_list = false
+   view_list = list_view if(defined? list_view)
+   clear_uploads = true
+   clear_uploads = clear_area if(defined? clear_area)
+   multi_upload = true
+   multi_upload = multi_file if(defined? multi_file)
+%>
+
+
+<% if(view_list) %>
+<style>
+/* Drag drop upload styles for list view */
+#<%= id -%> td {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.ds-output:before
+{
+    left: 5%;
+    top: 50%;
+}
+
+.progressBar
+{
+    position: relative;
+    top:0px;
+    left:0px;
+    width: 98px;
+    height: 14px;
+    border: 1px solid #000;
+    margin-top: 5px;
+    -webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius: 5px;
+    -moz-box-shadow: 1px 1px 2px #fff;
+}
+.progressBar p
+{
+    width: 20px;
+    height: 14px;
+    text-align: center;
+    -webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius: 5px;
+    background-color: #1E528C;
+    color: white;
+}
+</style>
+<% end %>
+
+
+<script type="text/javascript">
+var <%= id %>_supportedBrowser = false;
+var <%= id -%>_processing = false;
+var <%= id %>_set_url = "<%= submit_url %>";
+//var <%= id %>_base_url = get_creative_asset_upload_url();
+var <%= id %>_base_url = "<%= submit_url %>";
+var <%= id -%>_noSendAsBinary = false;
+
+<% if(!view_list) %>
+var <%= id %>_isImage = false;
+var <%= id %>_isMusic = false;
+var <%= id %>_isVideo = false;
+var <%= id %>_isOtherFile = false;
+<% end %>
+
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+  <%= id %>_supportedBrowser = true;
+} else {
+  <%= id %>_supportedBrowser = false;
+}
+
+</script>
+<%
+d_width = "100%"
+d_width = width if(defined?(width) && !width.nil?)
+d_height = 200
+d_height = height if(defined?(height) && !height.nil?)
+%>
+<div id="<%= id %>_upload_form" style="width:<%= d_width %>; height:<%= d_height %>px; padding: 5px;">
+  <div style="text-align:left;">
+    Select files to upload&nbsp;
+    <input type="file" id="<%= id -%>_files_load" name="files[]" <%= "multiple" if(multi_upload) %> />
+    <div class="sp5"></div>
+    <div style="width:100%;height:<%= d_height %>px;">
+      <div id="<%= id -%>" class="clearfix ds-output" style="height:<%= d_height-40 %>px;overflow:auto;overflow-x:hidden;border: 1px dashed #3B3E45;">
+        <% if(view_list) %>
+        <table style="width:100%;" id="<%= id -%>-listing01">
+          <tr style="background:#e0e0e0;">
+            <td style="width:15px;">&nbsp;</td>
+            <td style="width:200px;">File</td>
+            <td style="width:40px;">Size</td>
+            <td>Progress</td>
+          </tr>
+        </table>
+        <% else %>
+          <div style="width:100%;" id="<%= id -%>-listing01">
+        <% end %>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+
+<script type="text/javascript">
+if(<%= id %>_supportedBrowser == false)
+{
+   <% if(defined?(alternate_partial) && false)
+      # will add additional form for not supported browser later
+   %>
+   document.getElementById('<%= id %>_upload_form').innerHTML = '';
+   document.getElementById('<%= id %>_upload_form').style.display = 'none';
+   document.getElementById('alternate_<%= id %>_upload_form').style.display = 'block';
+  <% else %>
+  document.getElementById('<%= id %>_upload_form').innerHTML = '';
+  document.getElementById('<%= id %>_upload_form').innerHTML = "Browser is not supported";
+  <% end %>
+}
+
+var <%= id %>_UPLOADER = <%= id %>_UPLOADER || {};
+var <%= id -%>_files_loading = 0;
+var <%= id -%>_files_loaded_total = 0;
+var <%= id -%>_file_index = 0;
+var <%= id %>_files = [];
+var <%= id -%>_count = 0;
+(function()
+  {
+    var <%= id %>_dropContainer, <%= id %>_dropListing, <%= id %>_imgPreviewFragment = document.createDocumentFragment(), domElements;
+    var file_size_limit = 55524288;
+
+    <%= id %>_UPLOADER.setup = function()
+    {
+      <%= id %>_dropListing = document.getElementById("<%= id -%>-listing01");
+      <%= id %>_dropContainer = document.getElementById("<%= id -%>");
+
+     /* dropContainer.addEventListener("dragenter", function(event){dropListing.innerHTML = '';event.stopPropagation();event.preventDefault();}, false); */
+      <%= id %>_dropContainer.addEventListener("dragover", function(event){document.getElementById('<%= id -%>').style.background='#FEDD8E';event.stopPropagation();event.preventDefault();}, false);
+      <%= id %>_dropContainer.addEventListener("drop", <%= id %>_UPLOADER.handleDrop, false);
+    };
+
+    <%= id %>_UPLOADER.uploadError = function(error)
+    {
+       /* console.log("error: " + error.code); */
+    };
+
+      <%= id %>_UPLOADER.progressBar = function(event, <%= id %>_index)
+      {
+        <%= id %>_container = document.getElementById("<%= id -%>_item"+<%= id %>_index);
+        if(event.lengthComputable)
+        {
+          var <%= id -%>_percentage = Math.round((event.loaded * 100) / event.total),
+          <%= id -%>_loaderIndicator = <%= id %>_container.firstChild;
+          if(<%= id -%>_percentage < 100)
+          {
+            <%= id -%>_loaderIndicator.style.width = <%= id -%>_percentage + "px";
+            // <%= id -%>_loaderIndicator.textContent = <%= id -%>_percentage + "%";
+          }
+        }
+      }
+
+    <%= id %>_UPLOADER.processXHR = function(<%= id %>_file, <%= id %>_index, <%= id %>_bin)
+    {
+      var <%= id %>_xhr = new XMLHttpRequest(),
+      <%= id %>_container = document.getElementById("<%= id -%>_item"+<%= id %>_index),
+      <%= id %>_fileUpload = <%= id %>_xhr.upload;
+      <%= id %>_fileUpload.log = <%= id %>_container;
+      if(<%= id %>_fileUpload.addEventListener) {
+        <%= id %>_fileUpload.addEventListener("progress", function(event) {<%= id %>_UPLOADER.progressBar(event,<%= id %>_index);}, false);
+        <%= id %>_fileUpload.addEventListener("load", function(event)
+        {
+          <%= id %>_container.className = "loaded";
+        }, false);
+        <%= id %>_fileUpload.addEventListener("error", <%= id %>_UPLOADER.uploadError, false);
+      }
+      else {
+        <%= id %>_fileUpload.onprogress = function(event) {
+          <%= id %>_UPLOADER.progressBar(event,<%= id %>_index);
+        }
+        <%= id %>_fileUpload.onloadend = function(event) {
+          <%= id %>_container.className = "loaded";
+        }
+      }
+
+      <%= id %>_xhr.open("POST", <%= id %>_base_url, true);
+      <%= id %>_xhr.overrideMimeType('text/plain; charset=x-user-defined-binary');
+      <%= id %>_xhr.setRequestHeader("X-File-Name", <%= id %>_file.name);
+      <%= id %>_xhr.setRequestHeader("X-CSRF-Token", $('meta[name="csrf-token"]').attr('content'));
+      if(<%= id %>_xhr.sendAsBinary != null && !<%= id -%>_noSendAsBinary) {
+        <%= id %>_xhr.onloadstart = function () {  <%= id -%>_files_loading += 1;}
+        <%= id %>_xhr.onloadend = function() {
+                        <%= id -%>_files_loading -= 1;
+                        document.getElementById('<%= id -%>_item'+<%= id -%>_file_index).innerHTML=<%= id %>_xhr.responseText;
+                        <%= id -%>_files_loaded_total += 1;
+                        <%= id -%>_file_index += 1;
+                        uploadItem(<%= id -%>_files_loaded_total);}
+        <%= id %>_bin = <%= id %>_bin.replace(/^(data:)[\w\W]+(;base64,)/g,"");
+        <%= id %>_xhr.sendAsBinary(<%= id %>_bin);
+      }
+      else {
+        <%= id %>_xhr.onreadystatechange = function (aEvt) {
+          if(<%= id %>_xhr.readyState == 4) {
+            if(<%= id %>_xhr.status == 200) {
+              document.getElementById('<%= id -%>_item'+<%= id -%>_file_index).innerHTML=innerHTML=<%= id %>_xhr.responseText;
+              <%= id -%>_files_loaded_total += 1;
+              <%= id -%>_file_index += 1;
+              uploadItem(<%= id -%>_files_loaded_total);
+            }
+            else  {
+
+            }
+          }
+        };
+
+        var sendAsBinaryChrome = function(req, datastr) {
+          var ui8a = new Uint8Array(datastr.length);
+          for (var i = 0; i < datastr.length; i++) {
+                ui8a[i] = (datastr.charCodeAt(i) & 0xff);
+          }
+          try {
+              req.send(ui8a);
+          } catch(error) {
+              req.send(ui8a.buffer);
+          }
+        }
+
+        <%= id -%>_noSendAsBinary = true;
+        <%= id %>_bin = <%= id %>_bin.replace(/^(data:)[\w\W]+(;base64,)/g,"");
+        sendAsBinaryChrome(<%= id %>_xhr, <%= id %>_bin);
+      }
+    };
+
+    <%= id %>_UPLOADER.handleDrop = function(event)
+    {
+      // new Effect.Highlight('<%= id -%>');
+      document.getElementById('<%= id -%>').style.background='';
+      if(<%= id -%>_processing == false) {
+        <%= id -%>_processing = true;
+        var <%= id %>_dt = event.dataTransfer;
+        if(<%= id %>_dt != null) {
+          <%= id %>_files = <%= id %>_dt.files;
+        }
+        else {
+          <%= id %>_files = event.target.files;
+        }
+        if(<%= multi_upload %>){
+          <%= id -%>_count = <%= id %>_files.length;  
+        }else{
+          <%= id -%>_count = 1;
+        }
+        
+        event.stopPropagation();
+        event.preventDefault();
+        initUpload();
+      }
+    };
+
+<% if(view_list)
+   # Small view initUpload
+%>
+    function initUpload() {
+      for (var i = 0; i < <%= id -%>_count; i++)
+      {
+        if(<%= id %>_files[i].size < file_size_limit)
+        {
+          var file = <%= id %>_files[i],
+          droppedFileName = file.name,
+
+          domElements = [
+            document.createElement('tr'),
+            document.createElement('td' ),
+            document.createElement('td'),
+            document.createElement('td'),
+            document.createElement('td')
+          ];
+          progressDomElements = [
+            document.createElement('div'),
+            document.createElement('p')
+          ];
+          var index = i;
+          var f_size = <%= id %>_files[i].size/1024;
+          var f_size_txt = "KB";
+          if(f_size > 1024) {
+            f_size = f_size/1024;
+            f_size_txt = "MB";
+          }
+
+          domElements[1].innerHTML = <%= id -%>_file_index+i+1;
+          domElements[1].style = "text-align:left;";
+          domElements[2].innerHTML = <%= id %>_files[i].name;
+          domElements[3].innerHTML = Math.round(f_size)+f_size_txt;
+          domElements[4].innerHTML = '';
+          progressDomElements[0].className = "progressBar";
+          progressDomElements[0].id = "<%= id -%>_item"+(i+<%= id -%>_file_index);
+          progressDomElements[1].textContent = "";
+          progressDomElements[0].appendChild(progressDomElements[1]);
+          domElements[4].appendChild(progressDomElements[0]);
+          domElements[0].appendChild(domElements[1]);
+          domElements[0].appendChild(domElements[2]);
+          domElements[0].appendChild(domElements[3]);
+          domElements[0].appendChild(domElements[4]);
+          <%= id %>_imgPreviewFragment.appendChild(domElements[0]);
+          <%= id %>_dropListing.appendChild(<%= id %>_imgPreviewFragment);
+        }
+        else
+        {
+          alert("file is too big, needs to be below 50mb");
+        }
+      }
+      <%= id -%>_count = <%= id %>_files.length;
+      uploadItem(<%= id -%>_files_loaded_total);
+    }
+
+<% else %>
+    function initUpload() {
+      <%= id -%>_count = <%= id %>_files.length;
+      var fr = new Array();
+      var rdd = new Array();
+      for (var i = 0; i < <%= id -%>_count; i++)
+      {
+        if(<%= id %>_files[i].size < file_size_limit)
+        {
+          var file = <%= id %>_files[i],
+          droppedFileName = file.name,
+
+          domElements = [
+            document.createElement('div'),
+            document.createElement('img' ),
+            document.createElement('div'),
+          ];
+
+          progressDomElements = [
+            document.createElement('div'),
+            document.createElement('p')
+          ];
+
+          var index = i;
+          var f_size = <%= id %>_files[i].size/1024;
+          var f_size_txt = "KB";
+          if(f_size > 1024) {
+            f_size = f_size/1024;
+            f_size_txt = "MB";
+          }
+
+          progressDomElements[0].className = "progressBar";
+          progressDomElements[0].id = "<%= id -%>_item"+(i+<%= id -%>_file_index);
+          progressDomElements[1].textContent = "";
+          progressDomElements[0].appendChild(progressDomElements[1]);
+
+          domElements[0].className = "upload_div";
+          domElements[2].innerHTML = "";
+          domElements[1].id = "thumb"+(i+<%= id -%>_file_index);
+          // domElements[1].src = "/assets/loading_big.gif"
+          domElements[0].appendChild(domElements[1]);
+          domElements[0].appendChild(domElements[2]);
+          domElements[0].appendChild(progressDomElements[0]);
+          <%= id %>_dropListing.appendChild(domElements[0]);
+        }
+        else
+        {
+          alert("file is too big, needs to be below 1mb");
+        }
+      }
+      uploadItem(<%= id -%>_files_loaded_total);
+    }
+<% end %>
+
+
+    function uploadItem(i) {
+      if(i < <%= id -%>_count) {
+        var <%= id -%>_reader = new FileReader();
+        var <%= id -%>_file = <%= id %>_files[i];
+        <%= id -%>_reader.index = <%= id -%>_file_index;
+        <%= id -%>_reader.file = <%= id -%>_file;
+        if(<%= id -%>_reader.addEventListener) {
+          <%= id -%>_reader.addEventListener("loadend", <%= id %>_UPLOADER.buildImageListItem, false);
+        }
+        else {
+          <%= id -%>_reader.onloadend = function(event){<%= id %>_UPLOADER.buildImageListItem(event);};
+        }
+        <%= id -%>_reader.readAsDataURL(<%= id -%>_file);
+      }
+      else {
+        <%= id -%>_files_loading = 0;
+        <%= id -%>_files_loaded_total = 0;
+        <%=raw oncomplete_action if(defined?(oncomplete_action) && !oncomplete_action.nil?) %>
+
+<% if(!view_list) %>
+        /* will call ajax function to update screen */
+        <% if(clear_uploads) %>
+          document.getElementById("<%= id -%>-listing01").innerHTML = "";
+          <% end %>
+          <%= id %>_isImage = false;
+          <%= id %>_isMusic = false;
+          <%= id %>_isVideo = false;
+          <%= id %>_isOtherFile = false;	
+       <% end %>
+        submit_ajax_form('refresh_assets_form');
+        <%= id -%>_processing = false;
+      }
+    };
+
+    <%= id %>_UPLOADER.buildImageListItem = function (event) {
+      var <%= id -%>_data = event.target.result,
+      <%= id -%>_index = event.target.index,
+      <%= id -%>_file = event.target.file,
+      <%= id -%>_getBinaryDataReader = new FileReader();
+
+<% if(!view_list) %>
+      if(<%= id -%>_file.type.indexOf("image") > -1) {
+        <%= id %>_isImage = true;
+        document.getElementById('thumb'+<%= id -%>_index).src = event.target.result;
+      } else if(<%= id -%>_file.type.indexOf("audio") > -1) {
+        <%= id %>_isMusic = true;
+        document.getElementById('thumb'+<%= id -%>_index).src = "/images/v2/music.png";
+      } else if(<%= id -%>_file.type.indexOf("video") > -1) {
+        <%= id %>_isVideo = true;
+        document.getElementById('thumb'+<%= id -%>_index).src = "/images/v2/video.png";
+      } else {
+        <%= id %>_isOtherFile = true;
+        document.getElementById('thumb'+<%= id -%>_index).src = "/images/v2/files.png";
+      }
+<% end %>
+
+      if(<%= id -%>_getBinaryDataReader.addEventListener) {
+        <%= id -%>_getBinaryDataReader.addEventListener("loadend", function(evt){<%= id %>_UPLOADER.processXHR(<%= id -%>_file, <%= id -%>_index, <%= id -%>_data)}, false);
+      }
+      else {
+        <%= id -%>_getBinaryDataReader.onloadend = function(evt){<%= id %>_UPLOADER.processXHR(<%= id -%>_file, <%= id -%>_index, <%= id -%>_data);};
+      }
+      <%= id -%>_getBinaryDataReader.readAsBinaryString(<%= id -%>_file);
+     };
+    window.addEventListener("load", <%= id %>_UPLOADER.setup, false);
+    document.getElementById('<%= id -%>_files_load').addEventListener('change', <%= id %>_UPLOADER.handleDrop, false);
+  })();
+</script>
+
+
